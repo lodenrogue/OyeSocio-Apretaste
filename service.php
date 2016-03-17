@@ -1,7 +1,5 @@
 <?php
 
-// use Goutte\Client; // UNCOMMENT TO USE THE CRAWLER OR DELETE
-
 class OyeSocio extends Service
 {
 	/**
@@ -12,25 +10,21 @@ class OyeSocio extends Service
 	 * */
 	public function _main(Request $request)
 	{
-        //$output = file_get_contents("http://192.168.1.116:8080/oyesocio/api/signin?email={$request->email}");
-        $output = file_get_contents("http://192.168.1.116:8080/oyesocio/api/signin?email=test@test.com");
+        $output = file_get_contents("http://192.168.1.116:8080/oyesocio/api/signin?email={$request->email}");
+        //$output = file_get_contents("http://192.168.1.116:8080/oyesocio/api/signin?email=test@test.com");
         $outputJson = json_decode($output);
         $outputData = $outputJson->data;
 
-		// create a json object to send to the template
-		$responseContent = array(
-			"output" => $outputData
-		);
-
-		// create the response
 		$response = new Response();
 		if($outputJson->type == "SIGNUP"){
+			$responseContent = array(
+				"output" => $outputData
+			);
 			$response->setResponseSubject("Necesitamos saber su nombre");
 			$response->createFromTemplate("signup.tpl", $responseContent);
 		}
 		else {
-			$response->setResponseSubject("Su perfil");
-			$response->createFromText($outputData);
+			$response = $this->_perfil($request);
 		}
 		return $response;
 	}
@@ -45,13 +39,23 @@ class OyeSocio extends Service
 		curl_setopt($ch, CURLOPT_POST, 1);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, "firstName={$firstName}&lastName={$lastName}&email={$request->email}");
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		$output = curl_exec ($ch);
+		curl_exec ($ch);
 		curl_close ($ch);
 
-		// create the response
+		return $this->_perfil($request);
+	}
+
+	public function _perfil(Request $request){
+		$output = file_get_contents("http://192.168.1.116:8080/oyesocio/api/profile?email={$request->email}");
+		print_r($output);
+
 		$response = new Response();
 		$response->setResponseSubject("Su perfil");
-		$response->createFromText($outputData);
+		$response->createFromText($output);
 		return $response;
+	}
+
+	public function _publicar(Request $request){
+
 	}
 }
