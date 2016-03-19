@@ -8,14 +8,14 @@ class OyeSocio extends Service
 	 * @param Request
 	 * @return Response
 	 * */
-	public function _main(Request $request)
-	{
+	public function _main(Request $request){
         $output = file_get_contents("http://192.168.1.116:8080/oyesocio/api/signin?email={$request->email}");
         //$output = file_get_contents("http://192.168.1.116:8080/oyesocio/api/signin?email=test@test.com");
         $outputJson = json_decode($output);
         $outputData = $outputJson->data;
 
 		$response = new Response();
+		
 		if($outputJson->type == "SIGNUP"){
 			$responseContent = array(
 				"output" => $outputData
@@ -47,15 +47,34 @@ class OyeSocio extends Service
 
 	public function _perfil(Request $request){
 		$output = file_get_contents("http://192.168.1.116:8080/oyesocio/api/profile?email={$request->email}");
-		print_r($output);
 
-		$response = new Response();
-		$response->setResponseSubject("Su perfil");
-		$response->createFromText($output);
-		return $response;
+		if($output == "ERROR: NO USER FOUND") {
+			return $this->_main($request);
+		}
+		else {
+			$response = new Response();
+			$response->setResponseSubject("Su perfil");
+			$response->createFromText($output);
+			return $response;
+		}
 	}
 
 	public function _publicar(Request $request){
+		$message = $request->query;
+		
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_URL,"http://192.168.1.116:8080/oyesocio/api/publish");
+		curl_setopt($ch, CURLOPT_POST, 1);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, "userEmail={$request->email}&content={$message}");
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_exec ($ch);
+		curl_close ($ch);
 
+		if($ch == "ERROR: NO USER FOUND"){
+			return $this->_main($request);
+		}
+		else {
+			return $this->_perfil($request);
+		}
 	}
 }
