@@ -11,17 +11,12 @@ class OyeSocio extends Service
 	public function _main(Request $request){
         $output = file_get_contents("http://192.168.1.116:8080/oyesocio/api/signin?email={$request->email}");
         //$output = file_get_contents("http://192.168.1.116:8080/oyesocio/api/signin?email=test@test.com");
-        $outputJson = json_decode($output);
-        $outputData = $outputJson->data;
 
 		$response = new Response();
 		
-		if($outputJson->type == "SIGNUP"){
-			$responseContent = array(
-				"output" => $outputData
-			);
+		if($output == "SIGNUP"){
 			$response->setResponseSubject("Necesitamos saber su nombre");
-			$response->createFromTemplate("signup.tpl", $responseContent);
+			$response->createFromTemplate("signup.tpl", []);
 		}
 		else {
 			$response = $this->_perfil($request);
@@ -46,7 +41,15 @@ class OyeSocio extends Service
 	}
 
 	public function _perfil(Request $request, $userId){
-		$output = "";
+		$output = null;
+
+		// Check if a user id is passed in the query
+		if(is_numeric($request->query)){
+			$userId = $request->query;
+		}
+
+		// if we have a user id then return that user's profile
+		// Otherwise return the querying user's profile
 		if($userId != null){
 			$output = file_get_contents("http://192.168.1.116:8080/oyesocio/api/profile/{$userId}");
 		}
@@ -57,7 +60,11 @@ class OyeSocio extends Service
 		if($output == "ERROR: NO USER FOUND") {
 			return $this->_main($request);
 		}
+		else if($output == null){
+			//TODO - Let the user know that profile doesn't exist (Use a template)
+		}
 		else {
+
 			$response = new Response();
 			$response->setResponseSubject("Perfil");
 			$response->createFromText($output);
@@ -107,6 +114,5 @@ class OyeSocio extends Service
 			$outputJson = json_decode($serverOutput);
 			return $this->_perfil($request, $outputJson->userId);
 		}
-
 	}
 }
