@@ -45,15 +45,21 @@ class OyeSocio extends Service
 		return $this->_perfil($request);
 	}
 
-	public function _perfil(Request $request){
-		$output = file_get_contents("http://192.168.1.116:8080/oyesocio/api/profile?email={$request->email}");
+	public function _perfil(Request $request, $userId){
+		$output = "";
+		if($userId != null){
+			$output = file_get_contents("http://192.168.1.116:8080/oyesocio/api/profile/{$userId}");
+		}
+		else {
+			$output = file_get_contents("http://192.168.1.116:8080/oyesocio/api/profile?email={$request->email}");
+		}
 
 		if($output == "ERROR: NO USER FOUND") {
 			return $this->_main($request);
 		}
 		else {
 			$response = new Response();
-			$response->setResponseSubject("Su perfil");
+			$response->setResponseSubject("Perfil");
 			$response->createFromText($output);
 			return $response;
 		}
@@ -67,14 +73,40 @@ class OyeSocio extends Service
 		curl_setopt($ch, CURLOPT_POST, 1);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, "userEmail={$request->email}&content={$message}");
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_exec ($ch);
+		$serverOutput = curl_exec ($ch);
 		curl_close ($ch);
 
-		if($ch == "ERROR: NO USER FOUND"){
+		if($serverOutput == "ERROR: NO USER FOUND"){
 			return $this->_main($request);
 		}
 		else {
 			return $this->_perfil($request);
 		}
+	}
+
+	public function _responder(Request $request){
+		$reply = explode(" ", $request->query, 2);
+		$postId = $reply[0];
+		$content = $reply[1];
+
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_URL,"http://192.168.1.116:8080/oyesocio/api/reply");
+		curl_setopt($ch, CURLOPT_POST, 1);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, "postId={$postId}&userEmail={$request->email}&content={$content}");
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		$serverOutput = curl_exec ($ch);
+		curl_close ($ch);
+
+		if($serverOutput == "ERROR: NO USER FOUND"){
+			return $this->_main($request);
+		}
+		else if($serOutput == "ERROR: NO POST FOUND"){
+			//TODO - Let the user know the post doesn't exist (Use a template)
+		}
+		else {
+			$outputJson = json_decode($serverOutput);
+			return $this->_perfil($request, $outputJson->userId);
+		}
+
 	}
 }
